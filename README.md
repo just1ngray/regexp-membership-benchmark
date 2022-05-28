@@ -13,11 +13,37 @@ This repository is currently configured and set-up to test various partial deriv
 1. Mark the regular expression as done
 1. Perform the analysis
 
-### Randomly generating regular expressions
-Using `python generate_regexps.py` and the options in `config.yaml`, you can generate a list of regular expressions to test.
+
+## Installation
+
+### Requirements
+- git
+- Python 3.10 and a corresponding pip installation. [pyenv](https://github.com/pyenv/pyenv) is highly recommended
+- [Microsoft PICT](https://github.com/Microsoft/pict/): simply git clone, build, and move the `build/cli/pict` into your bin
+
+### Install
+```bash
+$ git clone https://github.com/just1ngray/regexp-membership-benchmark
+$ cd regexp-membership-benchmark
+$ pip install -r requirements.txt
+```
+
+
+## Usage
+
+### config.yaml
+Edit the configuration file to change the parameters of the experiment. There are comments inside this file to explain what each option does.
+
+### The regular expression file
+Using `$ python generate_regexps.py` and the options in `config.yaml`, you can generate a list of regular expressions to test.
+
+Alternatively you can manually create the regexps file (i.e., `data/regexps.txt`) with one regular expression per line. Note that the regular expressions __must__ be parsable using FAdo's [str2regexp](https://www.dcc.fc.up.pt/~rvr/FAdoDoc/index.html) and [str2sre](https://www.dcc.fc.up.pt/~rvr/FAdoDoc/index.html) parsers. You could also write your own parser if you choose.
+
+> Q: Why do the regular expressions have to be parsable with both `str2regexp` and `str2sre`? <br>
+> A: The gains from pairwise language generation are large for SRE type regular expressions where concatenation and disjunction operations can have n ($2 \leq n \lt \infty$) subexpressions. For example, see the difference between `(((a b) (c d)) ((e f) (g h)))` and `(a b c d e f g h)`. However, other relevant algorithms are implemented with the standard binary concatenations and disjunctions. One could create functions to convert between SRE and RegExp forms if needed.
 
 ### Testing/benchmarking regular expressions
-Using `python run_benchmarks.py` you can test the generated regular expressions. Note you can interrupt this process (Ctrl+C) without issue as it may take some time. Start where you left off by re-executing the command. To restart the benchmark, delete the todo and output data files.
+Using `$ python run_benchmarks.py` you can test the regular expressions. Note you can interrupt this process (Ctrl+C) without issue as it may take some time. Start where you left off by re-executing the command. To restart the benchmark, delete the todo (and optionally output) data files.
 
 ### Analysis
-`python analysis.py` TODO
+`$ python analysis.py` TODO
