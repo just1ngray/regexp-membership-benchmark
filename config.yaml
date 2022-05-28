@@ -1,0 +1,38 @@
+# settings related to the generation of regular expressions
+gen:
+  # number of symbols in the alphabet, sequentially starting at 'a'
+  alphabet_size: 10
+
+  # which special regexps should be generated
+  epsilon: true
+  empty: false
+
+  # how long should the regular expressions be?
+  lengths:
+    - 5
+    - 10
+    - 25
+    - 50
+    - 100
+    - 150
+    - 200
+    - 250
+    - 300
+    - 350
+
+  # how many regular expressions per length?
+  per_length: 385 # 95% confidence level with 5% margin of error
+
+# what degree of multiprocessing should be used?
+multiprocessing: 1
+
+# what should the file names be (all within the 'data/' directory)
+files:
+  # list of generated regular expressions
+  regexps: regexps.txt
+
+  # list of regular expressions remaining to benchmark
+  regexps_todo: regexps_todo.txt
+
+  # test results
+  data_output: output.json
