@@ -12,9 +12,9 @@ from time import sleep, strftime
 import os
 import shutil
 from multiprocessing import Process
-from FAdo.reex import str2regexp, str2sre
 from utils import *
 from methods import *
+from converters import RegExpConverter
 
 
 def benchmark_regexp(regexp: str):
@@ -28,9 +28,10 @@ def benchmark_regexp(regexp: str):
     writelog(strftime("%H:%M:%S") + ": REGEXP:", regexp, "\n========")
 
     # prepare the tests
-    tree = str2regexp(regexp, sigma=config().gen.alphabet)
+    tree = RegExpConverter.str_to_regexp(regexp, sigma=config().gen.alphabet)
     writelog(strftime("%H:%M:%S") + ": Generating accepting words ... ")
-    accepted = list(pairwise_language_generation(str2sre(regexp)))
+    accepted = list(pairwise_language_generation(RegExpConverter.str_to_sre(regexp),
+                                                max_timeout=config().max_pict_seconds))
     writelog(strftime("%H:%M:%S") + ": Done " + str(len(accepted)))
     writelog(strftime("%H:%M:%S") + ": Generating rejecting words ... ")
     rejected = list(find_rejected_words(tree.nfaPDDAG().evalWordP, accepted))

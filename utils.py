@@ -7,6 +7,8 @@ import yaml
 import json
 from FAdo.reex import *
 from FAdo.cfg import smallAlphabet
+from FAdo.fa import EnumNFA
+from converters import RegExpConverter
 from methods import METHODS
 
 
@@ -29,6 +31,7 @@ class _FileConfig:
 class Config:
     gen: _GenConfig
     multiprocessing: int
+    max_pict_seconds: float
     files: _FileConfig
 
 
@@ -49,6 +52,7 @@ def config() -> Config:
             per_length=cfg["gen"]["per_length"]
         ),
         multiprocessing=cfg["multiprocessing"],
+        max_pict_seconds=cfg["max_pict_seconds"],
         files=_FileConfig(**dict((k, f"data/{v}") for k, v in cfg["files"].items()))
     )
 
@@ -144,7 +148,7 @@ def radix_sort(language):
     return lang
 
 
-def _concat_pict(*arr: List[set[str]]) -> set[str]:
+def _concat_pict(*arr: List[set[str]], max_timeout: int=300) -> set[str]:
     """Uses Microsoft's PICT command-line tool to find pairwise coverage
     for a given list of languages `arr`
     """
@@ -153,6 +157,7 @@ def _concat_pict(*arr: List[set[str]]) -> set[str]:
     for num, words in enumerate(arr):
         output += f"{num}: {', '.join(w if len(w)>0 else '_' for w in words)}\n"
 
+    # prepare the file
     try:
         with open(fname, "w") as handle:
             handle.write(output)
@@ -160,9 +165,10 @@ def _concat_pict(*arr: List[set[str]]) -> set[str]:
         os.mkdir("tmp")
         with open(fname, "w") as handle:
             handle.write(output)
-    finally:
-        results = subprocess.check_output(["pict", fname], encoding="utf-8")
-        return set(word.replace("\t", "").replace("_", "") for word in results.splitlines()[1:])
+
+    # call pict
+    results = subprocess.check_output(["pict", fname], encoding="utf-8", timeout=max_timeout)
+    return set(word.replace("\t", "").replace("_", "") for word in results.splitlines()[1:])
 
 
 def get_random_sample(population, n: int):
@@ -182,7 +188,7 @@ def get_random_sample(population, n: int):
     return t(sample)
 
 
-def pairwise_language_generation(sre, maxsize: int=2_048) -> set[str]:
+def pairwise_language_generation(sre, maxsize: int=2_048, max_timeout: int=300) -> set[str]:
     """Finds a set of accepted words for the regular expression.
     Note this expects a SRE tree to take full advantage of pairwise features.
 
@@ -193,37 +199,63 @@ def pairwise_language_generation(sre, maxsize: int=2_048) -> set[str]:
     Inspired from that paper. Note star repetitions are taken 0, 1, and 3 times.
 
     Example:
-        >>> pairwise_language_generation(str2sre("(a+b+c)(d+e)(f+g+h)"))
+        >>> pairwise_language_generation(RegExpConverter.str_to_sre("(a+b+c)(d+e)(f+g+h)"))
         {'aeg', 'beg', 'cdg', 'adh', 'ceh', 'bef', 'adf', 'bdh', 'cdf'}
+
+    Note: if the call to pict takes longer than the configured maximum, we fall
+    back on NFA enumeration
     """
-    t = type(sre)
-    if t is CAtom:
-        return set([sre.val])
-    elif t is CEpsilon:
-        return set([""])
-    elif t is CEmptySet:
-        return set()
-    elif t is SDisj:
+    try:
+        t = type(sre)
+        if t is CAtom:
+            return set([sre.val])
+        elif t is CEpsilon:
+            return set([""])
+        elif t is CEmptySet:
+            return set()
+        elif t is SDisj:
+            lang = set()
+            for child in sre.arg:
+                lang.update(pairwise_language_generation(child))
+            if len(lang) > maxsize:
+                lang = get_random_sample(lang, maxsize)
+            return lang
+        elif t is SStar:
+            lang = pairwise_language_generation(sre.arg)
+            lang.add("")
+            lang.update(_concat_pict(lang, lang, lang, max_timeout=max_timeout))
+            if len(lang) > maxsize:
+                lang = get_random_sample(lang, maxsize)
+            return lang
+        elif t is SConcat:
+            lang = _concat_pict(*[ pairwise_language_generation(child) for child in sre.arg ],
+                                max_timeout=max_timeout)
+            if len(lang) > maxsize:
+                lang = get_random_sample(lang, maxsize)
+            return lang
+        else:
+            raise NotImplementedError()
+    except subprocess.TimeoutExpired:
+        nfa: EnumNFA = EnumNFA(RegExpConverter.sre_to_regexp(sre).nfaFollow())
         lang = set()
-        for child in sre.arg:
-            lang.update(pairwise_language_generation(child))
-        if len(lang) > maxsize:
-            lang = get_random_sample(lang, maxsize)
+
+        # if pict is taking too long, enumerate only a "small" part of the language
+        length = min_word_length(sre)
+        nfa.initStack()
+        nfa.tmin = {}
+        word = nfa.minWord(length)
+        while len(lang) < 100 and length <= min(max_word_length(sre), 500):
+            if word is None:
+                length += 1
+                nfa.tmin = {}
+                nfa.initStack()
+                word = nfa.minWord(length)
+            else:
+                lang.add(word)
+                nfa.fillStack(word)
+                word = nfa.nextWord(word)
+
         return lang
-    elif t is SStar:
-        lang = pairwise_language_generation(sre.arg)
-        lang.add("")
-        lang.update(_concat_pict(lang, lang, lang))
-        if len(lang) > maxsize:
-            lang = get_random_sample(lang, maxsize)
-        return lang
-    elif t is SConcat:
-        lang = _concat_pict(*[ pairwise_language_generation(child) for child in sre.arg ])
-        if len(lang) > maxsize:
-            lang = get_random_sample(lang, maxsize)
-        return lang
-    else:
-        raise NotImplementedError()
 
 
 def find_rejected_words(evalWordP: Callable[[str], bool], accepted: set[str]) -> set[str]:
@@ -293,5 +325,36 @@ def min_word_length(tree: RegExp) -> int|float:
         return sum(map(lambda child: min_word_length(child), tree.arg))
     elif t is CEmptySet: # MAYBE
         return float("inf")
+    else:
+        raise NotImplementedError()
+
+
+def max_word_length(tree: RegExp) -> int|float:
+    """Find the maximum word length of the language.
+    Returns -1 if empty
+    """
+    t = type(tree)
+    if t is CAtom:
+        return 1
+    elif t is CEpsilon:
+        return 0
+    elif t is CEmptySet:
+        return -1
+    elif t is CDisj:
+        return max(max_word_length(tree.arg1), max_word_length(tree.arg2))
+    elif t is SDisj:
+        return max(max_word_length(child) for child in tree.arg)
+    elif t is CConcat:
+        a = max_word_length(tree.arg1)
+        b = max_word_length(tree.arg2)
+        return a + b if a >= 0 and b >= 0 else -1
+    elif t is SConcat:
+        lengths = [max_word_length(child) for child in tree.arg]
+        return sum(lengths) if all(length >= 0 for length in lengths) else -1
+    elif t in [CStar, SStar]:
+        if max_word_length(tree.arg) > 0:
+            return float("inf")
+        else:
+            return 0
     else:
         raise NotImplementedError()

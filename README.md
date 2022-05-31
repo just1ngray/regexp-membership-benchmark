@@ -37,10 +37,7 @@ Edit the configuration file to change the parameters of the experiment. There ar
 ### The regular expression file
 Using `$ python generate_regexps.py` and the options in `config.yaml`, you can generate a list of regular expressions to test.
 
-Alternatively you can manually create the regexps file (i.e., `data/regexps.txt`) with one regular expression per line. Note that the regular expressions __must__ be parsable using FAdo's [str2regexp](https://www.dcc.fc.up.pt/~rvr/FAdoDoc/index.html) and [str2sre](https://www.dcc.fc.up.pt/~rvr/FAdoDoc/index.html) parsers. You could also write your own parser if you choose.
-
-> Q: Why do the regular expressions have to be parsable with both `str2regexp` and `str2sre`? <br>
-> A: The gains from pairwise language generation are large for SRE type regular expressions where concatenation and disjunction operations can have n ($2 \leq n \lt \infty$) subexpressions. For example, see the difference between `(((a b) (c d)) ((e f) (g h)))` and `(a b c d e f g h)`. However, other relevant algorithms are implemented with the standard binary concatenations and disjunctions. One could create functions to convert between SRE and RegExp forms if needed.
+Alternatively you can manually create the regexps file (i.e., `data/regexps.txt`) with one regular expression per line. Note that the regular expressions __must__ be parsable using FAdo's [str2regexp](https://www.dcc.fc.up.pt/~rvr/FAdoDoc/index.html) parser. You could also write your own parser and hook it into the `converters.py` module if you choose.
 
 ### Testing/benchmarking regular expressions
 Using `$ python run_benchmarks.py` you can test the regular expressions. Note you can interrupt this process (Ctrl+C) without issue as it may take some time. Start where you left off by re-executing the command. To restart the benchmark, delete the todo (and optionally output) data files.

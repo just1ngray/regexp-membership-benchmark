@@ -26,6 +26,9 @@ gen:
 # what degree of multiprocessing should be used?
 multiprocessing: 1
 
+# how long should we wait for pict before we interrupt and use NFA generation
+max_pict_seconds: 300 # 5 minutes
+
 # what should the file names be (all within the 'data/' directory)
 files:
   # list of generated regular expressions

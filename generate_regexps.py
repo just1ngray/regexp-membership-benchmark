@@ -5,9 +5,9 @@ $ python generate_regexps.py
 
 import os
 import sys
-from FAdo.reex import str2regexp
 from FAdo.cfg import REStringRGenerator
 from utils import config
+from converters import RegExpConverter
 
 
 if __name__ == "__main__":
@@ -39,7 +39,7 @@ if __name__ == "__main__":
 
                 # if the star height is too large, the pairwise language generation
                 # strategy becomes extremely slow
-                height = str2regexp(regexp).starHeight()
+                height = RegExpConverter.str_to_regexp(regexp).starHeight()
                 if height > 2:
                     continue
 
