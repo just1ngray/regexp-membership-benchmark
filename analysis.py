@@ -18,6 +18,11 @@ def text_avg(data: dict[Callable, dict[int, list[float]]]):
             print("\t", str(length).ljust(5), fmean(data[method][length]))
 
 
+def avg_word_length_per_regexp_length(data: dict[int, list[float]]):
+    print("\nlen(re)", "fmean(word length)")
+    for regexp_length in sorted(data.keys()):
+        print(str(regexp_length).ljust(7), fmean(data[regexp_length]))
+
 def display(data: dict[Callable, dict[int, list[float]]]):
     fig, ax = plt.subplots()
     lines = {}
@@ -87,13 +92,20 @@ if __name__ == "__main__":
 
     # method => length => [sorted times]
     data = dict((method, dict()) for method in METHODS)
+    avg_word_len_per_re_len = dict()
 
     handle = open(config().files.data_output, "r")
     for line in handle.readlines():
         entry = OutputFileEntry.from_json_str(line)
+        nwords = entry.nwords_acc + entry.nwords_rej
+
+        lengths = avg_word_len_per_re_len.get(entry.length, list())
+        lengths.append(entry.avg_word_length)
+        avg_word_len_per_re_len[entry.length] = lengths
+
         for method in data:
             times = data[method].get(entry.length, list())
-            times.append(entry.get_time(method))
+            times.append(entry.get_time(method) / nwords) # average time per word
             data[method][entry.length] = times
 
     handle.close()
@@ -104,4 +116,5 @@ if __name__ == "__main__":
     ### PERFORM ANALYSIS ON DATA
 
     text_avg(data)
+    avg_word_length_per_regexp_length(avg_word_len_per_re_len)
     display(data)
