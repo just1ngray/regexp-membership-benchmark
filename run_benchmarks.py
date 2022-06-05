@@ -62,7 +62,7 @@ def benchmark_regexp(regexp: str):
             for method in METHODS:
                 res, cpu_time = method(tree, w)
                 assert res is expected, f"{regexp} using {method.__name__} should{'' if expected else ' not'} "\
-                    "have accepted {w}. Returned {res}"
+                    f"have accepted {w}. Returned {res}"
                 entry.add_time(method, cpu_time)
 
             logfile.seek(position)
