@@ -56,3 +56,5 @@ if __name__ == "__main__":
             print(u" \u2713") # check mark
 
     print("Done!")
+    print("You may wish to create a snapshot copy of the `config.yaml` file and add it "
+         f"to the {datadir} so you can easily remember how the regexps were generated.")
