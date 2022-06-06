@@ -1,6 +1,6 @@
 """Analysis of the regular expression tests
 
-$ python analysis.py
+$ python analysis.py data
 """
 import os
 from math import sqrt
@@ -85,16 +85,19 @@ def display(data: dict[Callable, dict[int, list[float]]]):
 
 
 if __name__ == "__main__":
-    if not os.path.exists(config().files.data_output):
-        print(f"Missing the output file, {config().files.data_output}. "
-               "First you must 'python run_benchmarks'")
+    datadir = get_output_dir()
+    output_file = os.path.join(datadir, config().files.data_output)
+
+    if not os.path.exists(output_file):
+        print(f"Missing the output file, {output_file}. "
+              f"First you must 'python run_benchmarks {datadir}'")
         exit(1)
 
     # method => length => [sorted times]
     data = dict((method, dict()) for method in METHODS)
     avg_word_len_per_re_len = dict()
 
-    handle = open(config().files.data_output, "r")
+    handle = open(output_file, "r")
     for line in handle.readlines():
         entry = OutputFileEntry.from_json_str(line)
         nwords = entry.nwords_acc + entry.nwords_rej

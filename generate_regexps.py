@@ -1,26 +1,29 @@
 """Generate the file of regular expressions according to configured values (config.yaml)
 
-$ python generate_regexps.py
+$ python generate_regexps.py data
 """
 
 import os
 import sys
 from FAdo.cfg import REStringRGenerator
-from utils import config
+from utils import config, get_output_dir
 from converters import RegExpConverter
 
 
 if __name__ == "__main__":
-    if os.path.exists(config().files.regexps):
-        print(f"Some regular expressions in {config().files.regexps} have already been generated.",
+    datadir = get_output_dir()
+    regexps_file = os.path.join(datadir, config().files.regexps)
+
+    if os.path.exists(regexps_file):
+        print(f"Some regular expressions in {regexps_file} have already been generated.",
             "Please rename or delete files appropriately.")
         exit(1)
 
     print(f"Generating {config().gen.per_length} for each length {config().gen.lengths}")
     print(f"Over the alphabet: {config().gen.alphabet}\n")
 
-    if not os.path.exists("data"): os.mkdir("data")
-    with open(config().files.regexps, "w") as handle:
+    if not os.path.exists(datadir): os.mkdir(datadir)
+    with open(regexps_file, "w") as handle:
         for regexp_length in config().gen.lengths:
             print(str(regexp_length).ljust(6), end="")
             sys.stdout.flush()

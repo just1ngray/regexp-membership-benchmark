@@ -1,6 +1,8 @@
 from functools import cache
 from dataclasses import dataclass
 from typing import Callable, TypeVar, Type, List
+import sys
+import os
 import subprocess
 import random
 import yaml
@@ -53,8 +55,20 @@ def config() -> Config:
         ),
         multiprocessing=cfg["multiprocessing"],
         max_pict_seconds=cfg["max_pict_seconds"],
-        files=_FileConfig(**dict((k, f"data/{v}") for k, v in cfg["files"].items()))
+        files=_FileConfig(**cfg["files"])
     )
+
+
+def get_output_dir():
+    """Finds the output directory to work with
+    In this directory will be regexps, regexps_todo, and output.json files.
+    """
+    if len(sys.argv) <= 1:
+        print("Please provide an output directory as a command-line argument")
+        print(f"E.g., $ python {sys.argv[0]} data")
+        exit(1)
+
+    return sys.argv[1]
 
 
 _T = TypeVar("_T")

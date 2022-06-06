@@ -5,7 +5,7 @@
 4. Measure the time it takes each method to accept & reject each word
 5. Output the results to an output file for later analysis
 
-$ python run_benchmarks.py
+$ python run_benchmarks.py data
 """
 
 from time import sleep, strftime
@@ -17,7 +17,7 @@ from methods import *
 from converters import RegExpConverter
 
 
-def benchmark_regexp(regexp: str):
+def benchmark_regexp(regexp: str, datadir: str):
     # logging
     logfilename = f"tmp/{os.getpid()}.log"
     logfile = open(logfilename, "w")
@@ -71,7 +71,8 @@ def benchmark_regexp(regexp: str):
             writelog(".", end="") # mark it as finished
 
     # write the results
-    with open(config().files.data_output, "a") as file:
+    output_file = os.path.join(datadir, config().files.data_output)
+    with open(output_file, "a") as file:
         file.write(entry.to_json() + "\n")
 
     # cleanup
@@ -82,14 +83,18 @@ def benchmark_regexp(regexp: str):
 
 
 if __name__ == "__main__":
-    if not os.path.exists(config().files.regexps):
-        print(f"Expecting a file of regular expressions called {config().files.regexps}")
-        print("It can be generated using 'python generate_regexps.py'")
+    datadir = get_output_dir()
+    regexps_file = os.path.join(datadir, config().files.regexps)
+    regexps_todo_file = os.path.join(datadir, config().files.regexps_todo)
+
+    if not os.path.exists(regexps_file):
+        print(f"Expecting a file of regular expressions called {regexps_file}")
+        print(f"It can be generated using 'python generate_regexps.py {datadir}'")
         exit(1)
 
-    if not os.path.exists(config().files.regexps_todo):
-        print(f"{config().files.regexps_todo} does not exist. Creating it from {config().files.regexps}")
-        shutil.copy(config().files.regexps, config().files.regexps_todo)
+    if not os.path.exists(regexps_todo_file):
+        print(f"{regexps_todo_file} does not exist. Creating it from {regexps_file}")
+        shutil.copy(regexps_file, regexps_todo_file)
 
     if not os.path.exists("tmp"):
         os.mkdir("tmp")
@@ -98,7 +103,7 @@ if __name__ == "__main__":
     workers = dict()
     try:
         if not os.path.exists("data"): os.mkdir("data")
-        with open(config().files.regexps_todo, "r+") as file:
+        with open(regexps_todo_file, "r+") as file:
             while True:
                 linestart = file.tell()
                 line = file.readline()
@@ -126,7 +131,7 @@ if __name__ == "__main__":
 
                 # call the process
                 regexp = line.removesuffix(os.linesep)
-                proc = Process(target=benchmark_regexp, args=(regexp,), name=f"Python-{regexp[:16]}")
+                proc = Process(target=benchmark_regexp, args=(regexp, datadir), name=f"Python-{regexp[:16]}")
                 proc.start()
                 workers[proc] = (linestart, line[:len(DONE_MARKER)])
 
@@ -142,7 +147,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         pass
     finally:
-        with open(config().files.regexps_todo, "r+") as file:
+        with open(regexps_todo_file, "r+") as file:
             for proc in workers:
                 linestart, repl = workers[proc]
                 file.seek(linestart)
