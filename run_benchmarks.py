@@ -24,7 +24,7 @@ def benchmark_regexp(regexp: str, datadir: str):
     def writelog(*args, sep=" ", end="\n"):
         logfile.write(sep.join(str(arg) for arg in args) + end)
         logfile.flush()
-    print("\t", regexp)
+    print("\t", strftime("%H:%M:%S"), regexp)
     writelog(strftime("%H:%M:%S") + ": REGEXP:", regexp, "\n========")
 
     # prepare the tests
